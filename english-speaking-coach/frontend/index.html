@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 英语口语陪练 Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <div class="mx-auto max-w-3xl px-4 py-8">
+    <header class="mb-6 text-center">
+      <h1 class="text-3xl font-bold text-slate-900">AI 英语口语陪练</h1>
+      <p class="mt-2 text-slate-600">点击录音，用英语对话，AI 会自动语音回复</p>
+    </header>
+
+    <section class="mb-4 rounded-2xl bg-white p-4 shadow">
+      <div class="mb-3 flex flex-wrap items-center gap-3">
+        <button
+          id="recordBtn"
+          class="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          开始录音
+        </button>
+        <span id="statusText" class="text-sm text-slate-500">准备就绪</span>
+      </div>
+      <p id="interimText" class="min-h-[1.5rem] text-sm italic text-blue-500"></p>
+    </section>
+
+    <section class="rounded-2xl bg-white p-4 shadow">
+      <h2 class="mb-3 text-lg font-semibold">对话记录</h2>
+      <div
+        id="chatBox"
+        class="h-[420px] space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4"
+      >
+        <div class="text-sm text-slate-500">还没有对话，点击「开始录音」说几句英语吧。</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE =
+      window.location.port === "5000"
+        ? window.location.origin
+        : "http://127.0.0.1:5000";
+    const recordBtn = document.getElementById("recordBtn");
+    const statusText = document.getElementById("statusText");
+    const interimText = document.getElementById("interimText");
+    const chatBox = document.getElementById("chatBox");
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    let recognition = null;
+    let isRecording = false;
+    let isBusy = false;
+    let history = [];
+
+    function setStatus(text) {
+      statusText.textContent = text;
+    }
+
+    function appendMessage(role, content) {
+      if (chatBox.querySelector(".text-slate-500")) {
+        chatBox.innerHTML = "";
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.className =
+        role === "user"
+          ? "ml-auto max-w-[85%] rounded-2xl bg-blue-600 px-4 py-2 text-white"
+          : "mr-auto max-w-[85%] rounded-2xl bg-white px-4 py-2 shadow border border-slate-200";
+
+      const label = document.createElement("div");
+      label.className = "mb-1 text-xs font-semibold opacity-80";
+      label.textContent = role === "user" ? "你" : "Emma (AI)";
+
+      const body = document.createElement("div");
+      body.className = "whitespace-pre-wrap text-sm";
+      body.textContent = content;
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(body);
+      chatBox.appendChild(wrapper);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function speak(text) {
+      return new Promise((resolve) => {
+        if (!("speechSynthesis" in window)) {
+          resolve();
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        utterance.rate = 0.95;
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    async function sendToAI(userText) {
+      isBusy = true;
+      recordBtn.disabled = true;
+      setStatus("AI 正在思考...");
+
+      try {
+        const response = await fetch(`${API_BASE}/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userText,
+            history,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "请求失败");
+        }
+
+        const reply = data.reply.trim();
+        history.push({ role: "user", content: userText });
+        history.push({ role: "assistant", content: reply });
+        appendMessage("assistant", reply);
+
+        setStatus("正在朗读 AI 回复...");
+        await speak(reply);
+        setStatus("准备就绪，可以继续录音");
+      } catch (error) {
+        appendMessage("assistant", `出错了：${error.message}`);
+        setStatus("发生错误，请重试");
+      } finally {
+        isBusy = false;
+        recordBtn.disabled = false;
+      }
+    }
+
+    function initRecognition() {
+      if (!SpeechRecognition) {
+        setStatus("当前浏览器不支持语音识别，请使用 Chrome 或 Edge");
+        recordBtn.disabled = true;
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        isRecording = true;
+        recordBtn.textContent = "停止录音";
+        recordBtn.classList.replace("bg-blue-600", "bg-red-600");
+        recordBtn.classList.replace("hover:bg-blue-700", "hover:bg-red-700");
+        setStatus("正在聆听，请说英语...");
+        interimText.textContent = "";
+      };
+
+      recognition.onresult = (event) => {
+        let interim = "";
+        let finalText = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalText += transcript;
+          } else {
+            interim += transcript;
+          }
+        }
+
+        interimText.textContent = interim ? `识别中：${interim}` : "";
+
+        if (finalText.trim()) {
+          const text = finalText.trim();
+          appendMessage("user", text);
+          sendToAI(text);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        setStatus(`语音识别错误：${event.error}`);
+        stopRecording();
+      };
+
+      recognition.onend = () => {
+        if (isRecording) {
+          stopRecording();
+        }
+      };
+    }
+
+    function startRecording() {
+      if (!recognition || isBusy) return;
+      recognition.start();
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      recordBtn.textContent = "开始录音";
+      recordBtn.classList.replace("bg-red-600", "bg-blue-600");
+      recordBtn.classList.replace("hover:bg-red-700", "hover:bg-blue-700");
+      interimText.textContent = "";
+      if (!isBusy) {
+        setStatus("准备就绪");
+      }
+    }
+
+    recordBtn.addEventListener("click", () => {
+      if (isBusy) return;
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        startRecording();
+      }
+    });
+
+    initRecognition();
+  </script>
+</body>
+</html>
