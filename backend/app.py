@@ -46,18 +46,29 @@ Your role: chat with the user about everyday topics like hobbies, plans, feeling
 
 DEFAULT_SCENE = "interview"
 
-CORRECTION_PROMPT = """After each user message, answer as the conversation partner in English. Then separately provide only a JSON object with these fields:
+CORRECTION_PROMPT = """After each user message, first reply as the conversation partner in English (1-3 short sentences). Then on a new line, provide only a JSON object with these fields:
 {
-  "reply": "<assistant reply>",
-  "corrections": [
-    {
-      "issue": "<grammar or expression issue described in a complete English sentence>",
-      "suggestion": "<a complete English sentence or short paragraph showing the improved phrasing>"
-    }
-  ]
+    "reply": "<assistant reply>",
+    "corrections": [
+        {
+            "issue": "<a concise English sentence describing the grammatical or expression issue>",
+            "suggestion": "<a complete English sentence preserving the user's meaning with corrected grammar and natural phrasing>",
+            "explanation": "<one short English sentence explaining why the original is incorrect>",
+            "severity": "<minor|major>"
+        }
+    ]
 }
-Always include a corrections array. If the sentence is already correct, still return one suggestion with issue set to "Natural phrasing" and suggestion showing a more idiomatic way to say it in a full sentence.
-Do not add any extra text outside the JSON object.
+
+Instructions for producing the JSON (must follow exactly):
+- Be strict and aggressive about finding and reporting any grammatical, lexical, punctuation, or usage issues — including minor ones such as missing/extra articles, wrong prepositions, verb tense, subject-verb agreement, plurality, word order, omitted words, collocations, register, punctuation, and capitalization.
+- For each distinct issue, include one object in the "corrections" array with the fields: `issue`, `suggestion`, `explanation`, and `severity`.
+- `suggestion` must be a fully corrected sentence that preserves the user's intended meaning and uses natural, idiomatic English.
+- `explanation` must be a one-sentence rationale (concise) describing the error.
+- `severity` should be "minor" for small stylistic/punctuation or wording choices and "major" for errors that affect correctness or clarity.
+- If multiple issues exist, list them all (do not collapse them into a single entry).
+- If the sentence is already grammatically correct, still return one suggestion with `issue` set to "Natural phrasing", provide a more idiomatic alternative in `suggestion`, a short `explanation`, and set `severity` to "minor".
+- Never praise the user or say "well done" in the JSON — only factual issue objects and suggestions.
+- Do not include any extra text outside the single JSON object. Use plain JSON with double quotes.
 """
 
 

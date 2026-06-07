@@ -143,10 +143,16 @@
         .map((item) => {
           const issue = item.issue || item.message || "发现问题";
           const suggestion = item.suggestion || item.fix || "请优化这句话。";
+          const explanation = item.explanation || "";
+          const severity = item.severity || "minor";
           return `
             <div class="mb-3 rounded-xl bg-slate-100 p-3">
-              <div class="font-semibold text-slate-800">问题：</div>
+              <div class="flex items-center justify-between">
+                <div class="font-semibold text-slate-800">问题：</div>
+                <div class="text-xs text-slate-500">严重度：${severity}</div>
+              </div>
               <div class="text-slate-700">${issue}</div>
+              ${explanation ? `<div class="mt-2 text-sm text-slate-600">原因：${explanation}</div>` : ""}
               <div class="mt-2 font-semibold text-slate-800">建议：</div>
               <div class="text-slate-700">${suggestion}</div>
             </div>
