@@ -1,4 +1,6 @@
+import json
 import os
+import re
 from pathlib import Path
 
 import requests
@@ -44,6 +46,20 @@ Your role: chat with the user about everyday topics like hobbies, plans, feeling
 
 DEFAULT_SCENE = "interview"
 
+CORRECTION_PROMPT = """After each user message, answer as the conversation partner in English. Then separately provide only a JSON object with these fields:
+{
+  "reply": "<assistant reply>",
+  "corrections": [
+    {
+      "issue": "<grammar or expression issue described in a complete English sentence>",
+      "suggestion": "<a complete English sentence or short paragraph showing the improved phrasing>"
+    }
+  ]
+}
+Always include a corrections array. If the sentence is already correct, still return one suggestion with issue set to "Natural phrasing" and suggestion showing a more idiomatic way to say it in a full sentence.
+Do not add any extra text outside the JSON object.
+"""
+
 
 @app.route("/")
 def index():
@@ -62,7 +78,7 @@ def chat():
     if not user_message:
         return jsonify({"error": "message is required"}), 400
 
-    system_prompt = SCENE_PROMPTS[scene]
+    system_prompt = SCENE_PROMPTS[scene] + "\n\n" + CORRECTION_PROMPT
     messages = [{"role": "system", "content": system_prompt}]
     for item in history:
         role = item.get("role")
@@ -83,10 +99,19 @@ def chat():
         )
         response.raise_for_status()
         payload = response.json()
-        reply = payload.get("message", {}).get("content", "").strip()
-        if not reply:
+        raw_content = payload.get("message", {}).get("content", "").strip()
+        if not raw_content:
             return jsonify({"error": "empty response from ollama"}), 502
-        return jsonify({"reply": reply})
+
+        try:
+            parsed = json.loads(raw_content)
+        except ValueError:
+            json_text = re.search(r"\{[\s\S]*\}", raw_content)
+            parsed = json.loads(json_text.group(0)) if json_text else {}
+
+        reply = (parsed.get("reply") or raw_content).strip()
+        corrections = parsed.get("corrections") if isinstance(parsed.get("corrections"), list) else []
+        return jsonify({"reply": reply, "corrections": corrections})
     except requests.exceptions.ConnectionError:
         return (
             jsonify(

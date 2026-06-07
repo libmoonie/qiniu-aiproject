@@ -38,8 +38,16 @@
 
     <section class="rounded-2xl bg-white p-4 shadow">
       <h2 class="mb-3 text-lg font-semibold">对话记录</h2>
-      <div id="chatBox" class="h-[420px] space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div id="chatBox" class="h-[320px] space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4">
         <div class="text-sm text-slate-500">还没有对话，点击「开始录音」说几句英语吧。</div>
+      </div>
+    </section>
+
+    <section class="mt-4 rounded-2xl bg-white p-4 shadow">
+      <h2 class="mb-3 text-lg font-semibold">纠错反馈</h2>
+      <div id="correctionBox"
+        class="min-h-[140px] rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        AI 会在你说完后，给出语法问题和更地道表达建议。
       </div>
     </section>
   </div>
@@ -53,6 +61,7 @@
     const statusText = document.getElementById("statusText");
     const interimText = document.getElementById("interimText");
     const chatBox = document.getElementById("chatBox");
+    const correctionBox = document.getElementById("correctionBox");
     const sceneSelect = document.getElementById("sceneSelect");
 
     const SCENE_LABELS = {
@@ -117,6 +126,28 @@
       });
     }
 
+    function renderCorrections(corrections) {
+      if (!Array.isArray(corrections) || corrections.length === 0) {
+        correctionBox.innerHTML = '<div class="text-slate-500">没有发现明显语法问题，表达自然。</div>';
+        return;
+      }
+
+      correctionBox.innerHTML = corrections
+        .map((item) => {
+          const issue = item.issue || item.message || "发现问题";
+          const suggestion = item.suggestion || item.fix || "请优化这句话。";
+          return `
+            <div class="mb-3 rounded-xl bg-slate-100 p-3">
+              <div class="font-semibold text-slate-800">问题：</div>
+              <div class="text-slate-700">${issue}</div>
+              <div class="mt-2 font-semibold text-slate-800">建议：</div>
+              <div class="text-slate-700">${suggestion}</div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
     async function sendToAI(userText) {
       isBusy = true;
       recordBtn.disabled = true;
@@ -142,6 +173,7 @@
         history.push({ role: "user", content: userText });
         history.push({ role: "assistant", content: reply });
         appendMessage("assistant", reply);
+        renderCorrections(data.corrections);
 
         setStatus("正在朗读 AI 回复...");
         await speak(reply);
@@ -239,6 +271,8 @@
       history = [];
       chatBox.innerHTML =
         '<div class="text-sm text-slate-500">场景已切换，点击「开始录音」开始新对话。</div>';
+      correctionBox.innerHTML =
+        'AI 会在你说完后，给出语法和表达优化建议。';
       setStatus("场景已切换，准备就绪");
     });
 
