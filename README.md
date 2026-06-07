@@ -14,13 +14,15 @@ AI英语口语陪练
 下载安装包安装Ollama软件，配置国内镜像加速。
 ### 2. 拉取AI模型
 打开终端执行：
-```bash
 ollama pull qwen2.5:3b
 
-## **启动项目**
+## 启动项目
+### 在终端输入
 cd backend
-npm install
-npm run start
+pip install -r requirements.txt
+python app.py
+### 打开另一个终端，依次输入
 cd frontend
-npm install
-npm run dev
+python -m http.server 8080
+## 浏览器访问：
+http://127.0.0.1:5000
