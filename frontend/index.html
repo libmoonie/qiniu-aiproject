@@ -9,47 +9,54 @@
 </head>
 
 <body class="min-h-screen bg-slate-100 text-slate-800">
-  <div class="mx-auto max-w-3xl px-4 py-8">
+  <div class="mx-auto max-w-7xl px-4 py-8">
     <header class="mb-6 text-center">
       <h1 class="text-3xl font-bold text-slate-900">AI 英语口语陪练</h1>
       <p class="mt-2 text-slate-600">点击录音，用英语对话，AI 会自动语音回复</p>
     </header>
 
-    <section class="mb-4 rounded-2xl bg-white p-4 shadow">
-      <div class="mb-3 flex flex-wrap items-center gap-3">
-        <label for="sceneSelect" class="text-sm font-medium text-slate-700">练习场景</label>
-        <select id="sceneSelect"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
-          <option value="interview">面试</option>
-          <option value="restaurant">餐厅点餐</option>
-          <option value="meeting">商务会议</option>
-          <option value="daily-life">日常生活</option>
-        </select>
-      </div>
-      <div class="mb-3 flex flex-wrap items-center gap-3">
-        <button id="recordBtn"
-          class="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400">
-          开始录音
-        </button>
-        <span id="statusText" class="text-sm text-slate-500">准备就绪</span>
-      </div>
-      <p id="interimText" class="min-h-[1.5rem] text-sm italic text-blue-500"></p>
-    </section>
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <main class="space-y-4">
+        <section class="rounded-2xl bg-white p-4 shadow">
+          <div class="mb-3 flex flex-wrap items-center gap-3">
+            <label for="sceneSelect" class="text-sm font-medium text-slate-700">练习场景</label>
+            <select id="sceneSelect"
+              class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+              <option value="interview">面试</option>
+              <option value="restaurant">餐厅点餐</option>
+              <option value="meeting">商务会议</option>
+              <option value="daily-life">日常生活</option>
+            </select>
+          </div>
+          <div class="mb-3 flex flex-wrap items-center gap-3">
+            <button id="recordBtn"
+              class="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+              开始录音
+            </button>
+            <span id="statusText" class="text-sm text-slate-500">准备就绪</span>
+          </div>
+          <p id="interimText" class="min-h-[1.5rem] text-sm italic text-blue-500"></p>
+        </section>
 
-    <section class="rounded-2xl bg-white p-4 shadow">
-      <h2 class="mb-3 text-lg font-semibold">对话记录</h2>
-      <div id="chatBox" class="h-[320px] space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div class="text-sm text-slate-500">还没有对话，点击「开始录音」说几句英语吧。</div>
-      </div>
-    </section>
+        <section class="rounded-2xl bg-white p-4 shadow">
+          <h2 class="mb-3 text-lg font-semibold">对话记录</h2>
+          <div id="chatBox"
+            class="h-[320px] space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-sm text-slate-500">还没有对话，点击「开始录音」说几句英语吧。</div>
+          </div>
+        </section>
+      </main>
 
-    <section class="mt-4 rounded-2xl bg-white p-4 shadow">
-      <h2 class="mb-3 text-lg font-semibold">纠错反馈</h2>
-      <div id="correctionBox"
-        class="min-h-[140px] rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-        AI 会在你说完后，给出语法问题和更地道表达建议。
-      </div>
-    </section>
+      <aside class="space-y-4">
+        <section class="sticky top-8 rounded-2xl bg-white p-4 shadow">
+          <h2 class="mb-3 text-lg font-semibold">纠错反馈</h2>
+          <div id="correctionBox"
+            class="min-h-[140px] rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            AI 会在你说完后，给出语法问题和更地道表达建议。
+          </div>
+        </section>
+      </aside>
+    </div>
   </div>
 
   <script>
