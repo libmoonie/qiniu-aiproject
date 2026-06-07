@@ -18,11 +18,18 @@ ollama pull qwen2.5:3b
 
 ## 启动项目
 ### 在终端输入
+
 cd backend
 pip install -r requirements.txt
 python app.py
+
 ### 打开另一个终端，依次输入
+
 cd frontend
 python -m http.server 8080
+
 ## 浏览器访问：
 http://127.0.0.1:5000
+
+## 更新说明
+- 2026-06-07：新增场景选择功能，优化AI对话体验

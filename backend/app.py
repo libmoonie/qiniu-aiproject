@@ -1,4 +1,6 @@
+import json
 import os
+import re
 from pathlib import Path
 
 import requests
@@ -44,6 +46,31 @@ Your role: chat with the user about everyday topics like hobbies, plans, feeling
 
 DEFAULT_SCENE = "interview"
 
+CORRECTION_PROMPT = """After each user message, first reply as the conversation partner in English (1-3 short sentences). Then on a new line, provide only a JSON object with these fields:
+{
+    "reply": "<assistant reply>",
+    "corrections": [
+        {
+            "issue": "<a concise English sentence describing the grammatical or expression issue>",
+            "suggestion": "<a complete English sentence preserving the user's meaning with corrected grammar and natural phrasing>",
+            "explanation": "<one short English sentence explaining why the original is incorrect>",
+            "severity": "<minor|major>"
+        }
+    ]
+}
+
+Instructions for producing the JSON (must follow exactly):
+- Be strict and aggressive about finding and reporting any grammatical, lexical, punctuation, or usage issues — including minor ones such as missing/extra articles, wrong prepositions, verb tense, subject-verb agreement, plurality, word order, omitted words, collocations, register, punctuation, and capitalization.
+- For each distinct issue, include one object in the "corrections" array with the fields: `issue`, `suggestion`, `explanation`, and `severity`.
+- `suggestion` must be a fully corrected sentence that preserves the user's intended meaning and uses natural, idiomatic English.
+- `explanation` must be a one-sentence rationale (concise) describing the error.
+- `severity` should be "minor" for small stylistic/punctuation or wording choices and "major" for errors that affect correctness or clarity.
+- If multiple issues exist, list them all (do not collapse them into a single entry).
+- If the sentence is already grammatically correct, still return one suggestion with `issue` set to "Natural phrasing", provide a more idiomatic alternative in `suggestion`, a short `explanation`, and set `severity` to "minor".
+- Never praise the user or say "well done" in the JSON — only factual issue objects and suggestions.
+- Do not include any extra text outside the single JSON object. Use plain JSON with double quotes.
+"""
+
 
 @app.route("/")
 def index():
@@ -62,7 +89,7 @@ def chat():
     if not user_message:
         return jsonify({"error": "message is required"}), 400
 
-    system_prompt = SCENE_PROMPTS[scene]
+    system_prompt = SCENE_PROMPTS[scene] + "\n\n" + CORRECTION_PROMPT
     messages = [{"role": "system", "content": system_prompt}]
     for item in history:
         role = item.get("role")
@@ -83,10 +110,19 @@ def chat():
         )
         response.raise_for_status()
         payload = response.json()
-        reply = payload.get("message", {}).get("content", "").strip()
-        if not reply:
+        raw_content = payload.get("message", {}).get("content", "").strip()
+        if not raw_content:
             return jsonify({"error": "empty response from ollama"}), 502
-        return jsonify({"reply": reply})
+
+        try:
+            parsed = json.loads(raw_content)
+        except ValueError:
+            json_text = re.search(r"\{[\s\S]*\}", raw_content)
+            parsed = json.loads(json_text.group(0)) if json_text else {}
+
+        reply = (parsed.get("reply") or raw_content).strip()
+        corrections = parsed.get("corrections") if isinstance(parsed.get("corrections"), list) else []
+        return jsonify({"reply": reply, "corrections": corrections})
     except requests.exceptions.ConnectionError:
         return (
             jsonify(
